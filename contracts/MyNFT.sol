@@ -8,6 +8,9 @@ import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "hardhat/console.sol";
 
+// We need to import the helper functions from the contract that we copy/pasted.
+import {Base64} from "./libraries/Base64.sol";
+
 // inherit the contract we imported. This means we'll have access
 // to the inherited contract's methods.
 contract MyNFT is ERC721URIStorage {
@@ -112,26 +115,49 @@ contract MyNFT is ERC721URIStorage {
         // Get the current tokenId, this starts at 0.
         uint256 newItemId = _tokenIds.current();
 
-        // We go and randomly grab one word from each of the three arrays.
+        // go and randomly grab one word from each of the three arrays.
         string memory first = pickRandomFirstWord(newItemId);
         string memory second = pickRandomSecondWord(newItemId);
         string memory third = pickRandomThirdWord(newItemId);
+        string memory combinedWord = string(
+            abi.encodePacked(first, second, third)
+        );
 
         // concatenate it all together, and then close the <text> and <svg> tags.
         string memory finalSvg = string(
             abi.encodePacked(baseSvg, first, second, third, "</text></svg>")
         );
+        // Get all the JSON metadata in place and base64 encode it.
+        string memory json = Base64.encode(
+            bytes(
+                string(
+                    abi.encodePacked(
+                        '{"name": "',
+                        // set the title of our NFT as the generated word.
+                        combinedWord,
+                        '", "description": "A highly acclaimed collection of squares.", "image": "data:image/svg+xml;base64,',
+                        // add data:image/svg+xml;base64 and then append our base64 encode our svg.
+                        Base64.encode(bytes(finalSvg)),
+                        '"}'
+                    )
+                )
+            )
+        );
+
+        // Just like before, we prepend data:application/json;base64, to our data.
+        string memory finalTokenUri = string(
+            abi.encodePacked("data:application/json;base64,", json)
+        );
+
         console.log("\n--------------------");
-        console.log(finalSvg);
+        console.log(finalTokenUri);
         console.log("--------------------\n");
 
-        // Actually mint the NFT to the sender using msg.sender.
         _safeMint(msg.sender, newItemId);
 
-        // We'll be setting the tokenURI later!
-        _setTokenURI(newItemId, "blah");
+        // Update URI
+        _setTokenURI(newItemId, finalTokenUri);
 
-        // Increment the counter for when the next NFT is minted.
         _tokenIds.increment();
         console.log(
             "An NFT w/ ID %s has been minted to %s",
