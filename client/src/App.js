@@ -81,6 +81,8 @@ const App = () => {
       console.log("Connected", accounts[0]);
       setCurrentAccount(accounts[0]);
 
+      getNumberOfNFTs();
+
       // Setup listener! This is for the case where a user comes to our site
       // and connected their wallet for the first time.
       setupEventListener();
