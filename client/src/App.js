@@ -273,22 +273,24 @@ const App = () => {
               <span className="mint-count-text">{`NFTs Minted: ${minted}/${TOTAL_MINT_COUNT}`}</span>
             )}
           </div>
-          <div className="blockie-container">
-            <Blockies className="blockie" seed={currentAccount} />
-            <div style={{ width: "200px", whiteSpace: "nowrap" }}>
-              <MiddleEllipsis>
-                <span className="account-address">{currentAccount}</span>
-              </MiddleEllipsis>
+          {currentAccount && (
+            <div className="blockie-container">
+              <Blockies className="blockie" seed={currentAccount} />
+              <div style={{ width: "200px", whiteSpace: "nowrap" }}>
+                <MiddleEllipsis>
+                  <span className="account-address">{currentAccount}</span>
+                </MiddleEllipsis>
+              </div>
+              <img
+                alt="Copy to clipboard"
+                className="copy-to-clipboard"
+                src={clipboard}
+                onClick={() => {
+                  navigator.clipboard.writeText(currentAccount);
+                }}
+              />
             </div>
-            <img
-              alt="Copy to clipboard"
-              className="copy-to-clipboard"
-              src={clipboard}
-              onClick={() => {
-                navigator.clipboard.writeText(currentAccount);
-              }}
-            />
-          </div>
+          )}
         </div>
       </div>
     </div>
