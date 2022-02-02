@@ -1,20 +1,25 @@
 import React, { useEffect, useState } from "react";
 import "./styles/App.css";
 import twitterLogo from "./assets/twitter-logo.svg";
+import clipboard from "./assets/copy-icon.svg";
 import { ethers } from "ethers";
 import myNft from "./utils/MyNFT.json";
 import LoadSpinner from "./components/LoadSpinner";
+import Blockies from "react-blockies";
+import MiddleEllipsis from "react-middle-ellipsis";
 
 const TWITTER_HANDLE = "thescoho";
 const TWITTER_LINK = `https://twitter.com/${TWITTER_HANDLE}`;
 const OPENSEA_LINK = "https://testnets.opensea.io/assets";
 const TOTAL_MINT_COUNT = 50;
 
-const CONTRACT_ADDRESS = "0x2c226E43710986D27E430c3281BaF6E9B552EBB4";
+const CONTRACT_ADDRESS = "0xE286094F2A8489634002703De0551Bac136Ab06E";
 
 const App = () => {
   const [currentAccount, setCurrentAccount] = useState("");
   const [mining, setMining] = useState(null);
+  const [opensea, setOpenSea] = useState(null);
+  const [minted, setMinted] = useState(null);
 
   const checkIfWalletIsConnected = async () => {
     const { ethereum } = window;
@@ -81,6 +86,10 @@ const App = () => {
       setupEventListener();
     } catch (error) {
       console.log(error);
+      let message = JSON.parse(
+        error.message.substring(56).trim().replace("'", "")
+      ).value.data.data;
+      alert(message[Object.keys(message)[0]].reason);
     }
   };
 
@@ -105,11 +114,42 @@ const App = () => {
         connectedContract.on("NewNFTMinted", (from, tokenId) => {
           console.log(from, tokenId.toNumber());
           alert(
-            `OpenSea link: ${OPENSEA_LINK}/${CONTRACT_ADDRESS}/${tokenId.toNumber()}`
+            `Minted a fresh NFT!\r\nOpenSea link: ${OPENSEA_LINK}/${CONTRACT_ADDRESS}/${tokenId.toNumber()}\r\n(Note: OpenSea might take a while to properly display NFT, please wait a few minutes..)`
+          );
+          setOpenSea(
+            `${OPENSEA_LINK}/${CONTRACT_ADDRESS}/${tokenId.toNumber()}`
           );
         });
 
         console.log("Setup event listener!");
+      } else {
+        console.log("Ethereum object doesn't exist!");
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const getNumberOfNFTs = async () => {
+    try {
+      const { ethereum } = window;
+
+      if (ethereum) {
+        const provider = new ethers.providers.Web3Provider(ethereum);
+        const signer = provider.getSigner();
+        const connectedContract = new ethers.Contract(
+          CONTRACT_ADDRESS,
+          myNft.abi,
+          signer
+        );
+
+        let mintedNFTs = await connectedContract.mintedNFTs();
+
+        if (mintedNFTs === null) {
+          mintedNFTs = 0;
+        }
+
+        setMinted(mintedNFTs);
       } else {
         console.log("Ethereum object doesn't exist!");
       }
@@ -131,6 +171,8 @@ const App = () => {
           signer
         );
 
+        setOpenSea(null);
+
         console.log("Going to pop wallet now to pay gas...");
         let nftTxn = await connectedContract.makeAnEpicNFT();
         setMining(true);
@@ -138,6 +180,7 @@ const App = () => {
 
         await nftTxn.wait();
         setMining(false);
+        getNumberOfNFTs();
 
         console.log(
           `Mined, see transaction: https://rinkeby.etherscan.io/tx/${nftTxn.hash}`
@@ -148,7 +191,10 @@ const App = () => {
     } catch (error) {
       console.log(error);
       setMining(false);
-      alert(error);
+      let message = JSON.parse(
+        error.message.substring(56).trim().replace("'", "")
+      ).value.data.data;
+      alert(message[Object.keys(message)[0]].reason);
     }
   };
 
@@ -167,6 +213,14 @@ const App = () => {
     checkIfWalletIsConnected();
   }, []);
 
+  useEffect(() => {
+    getNumberOfNFTs();
+  }, []);
+
+  const handleClickOpenSea = () => {
+    window.open(opensea, "_blank");
+  };
+
   /*
    * Added a conditional render - don't want to show Connect to Wallet if already conencted
    */
@@ -179,25 +233,62 @@ const App = () => {
             Each unique. Each beautiful. Discover your NFT today.
           </p>
           {mining && <LoadSpinner />}
-          {currentAccount !== "" && !mining ? (
-            <button
-              onClick={askContractToMintNft}
-              className="cta-button connect-wallet-button"
-            >
-              Mint NFT
-            </button>
-          ) : (
-            renderNotConnectedContainer()
-          )}
+          <div className="button-container">
+            {currentAccount !== "" && !mining ? (
+              <button
+                onClick={askContractToMintNft}
+                className="cta-button mint-button"
+              >
+                Mint NFT
+              </button>
+            ) : (
+              renderNotConnectedContainer()
+            )}
+            {opensea != null && (
+              <button
+                className="cta-button connect-wallet-button"
+                onClick={handleClickOpenSea}
+              >
+                View on OpenSea
+              </button>
+            )}
+          </div>
         </div>
         <div className="footer-container">
-          <img alt="Twitter Logo" className="twitter-logo" src={twitterLogo} />
-          <a
-            className="footer-text"
-            href={TWITTER_LINK}
-            target="_blank"
-            rel="noreferrer"
-          >{`built by @${TWITTER_HANDLE}`}</a>
+          <div className="twitter-container">
+            <img
+              alt="Twitter Logo"
+              className="twitter-logo"
+              src={twitterLogo}
+            />
+            <a
+              className="footer-text"
+              href={TWITTER_LINK}
+              target="_blank"
+              rel="noreferrer"
+            >{`built by @${TWITTER_HANDLE}`}</a>
+          </div>
+          <div className="mint-count-container">
+            {minted && (
+              <span className="mint-count-text">{`NFTs Minted: ${minted}/${TOTAL_MINT_COUNT}`}</span>
+            )}
+          </div>
+          <div className="blockie-container">
+            <Blockies className="blockie" seed={currentAccount} />
+            <div style={{ width: "200px", whiteSpace: "nowrap" }}>
+              <MiddleEllipsis>
+                <span className="account-address">{currentAccount}</span>
+              </MiddleEllipsis>
+            </div>
+            <img
+              alt="Copy to clipboard"
+              className="copy-to-clipboard"
+              src={clipboard}
+              onClick={() => {
+                navigator.clipboard.writeText(currentAccount);
+              }}
+            />
+          </div>
         </div>
       </div>
     </div>
