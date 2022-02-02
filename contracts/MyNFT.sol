@@ -132,10 +132,28 @@ contract MyNFT is ERC721URIStorage {
         return uint256(keccak256(abi.encodePacked(input)));
     }
 
+    function mintedNFTs() public view returns (uint256 items) {
+        items = _tokenIds.current();
+        return (items + 1);
+    }
+
+    function canMintNFT(uint256 newItemId)
+        internal
+        pure
+        returns (bool maxNFTs)
+    {
+        maxNFTs = newItemId < 50;
+    }
+
     // A function our user will hit to get their NFT.
     function makeAnEpicNFT() public {
         // Get the current tokenId, this starts at 0.
         uint256 newItemId = _tokenIds.current();
+
+        require(
+            canMintNFT(newItemId) == true,
+            "Max limit of minted NFTs reached"
+        );
 
         // go and randomly grab one word from each of the three arrays.
         string memory first = pickRandomFirstWord(newItemId);
